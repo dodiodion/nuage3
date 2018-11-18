@@ -4,44 +4,105 @@ description: A template to deploy a load balanced web server
 
 parameters:
 
+  admin_pass:
+    type: string
+    description: Admin password
+    default: 6QaqaxZYC
+    constraints:
+      - length: { min: 6, max: 9 }
+        description: Password length must be between 6 and 9 characters
+      - allowed_pattern: "[a-zA-Z0-9]+"
+        description: Password must consist of characters and numbers only
+
+  key_name:
+    type: string
+    description: Name of an existing key pair to use for the server
+    default: tp3-cle
+    constraints:
+      - custom_constraint: nova.keypair
+
   image:
     type: string
-    description: Image utilisee pour les serveurs
-    #A completer
+    description: Image ID or image name to use for the server
+    default: INF4410-Ubuntu-trusty-mini
+    constraints:
+      - custom_constraint: glance.image
 
   flavor:
     type: string
-    description: Flavor utilisee par les serveurs
-    #A completer
+    description: Flavor for the server to be created
+    default: INF4410-mini
+    constraints:
+      - custom_constraint: nova.flavor
 
+  network:
+    type: string
+    description: Network 
+    default: inf4410-net
+  
+  external_network_id:
+    type: string
+    description: UUID of a Neutron external network
+    default: TODO
+  
   subnet_id:
     type: string
-    description: Sous-reseau dans lequel le load balancer sera situe
-    #A completer
-
-    # Vous pouvez ajouter d'autres paramètres
-    # Il faut bien définir les descriptions, les valeurs par default et les contraintes
+    description: UUID of the subnet where the load balancer is located
+    default: TODO
 
 resources:
   server_nodes:
-      type: OS::Heat::ResourceGroup
-      properties:
-      #A completer
-
+    type: OS::Heat::ResourceGroup
+    properties:
+      count: 2
+        resource_def:
+            type: OS::Nova::Server
+            properties:
+              key_name: { get_param: key_name }
+              image: { get_param: image }
+              flavor: { get_param: flavor }
+              admin_pass: { get_param: admin_pass }
+              networks: [{network: {get_param: network}}]
+              user_data_format: RAW
+              user_data:
+                str_replace:
+                  template: |
+                    #!/bin/bash
+                    wget "https://raw.githubusercontent.com/houssemmh/INF8480-TP3/master/server.py"
+                    python server.py
+                  params:
+                    db_port: { get_param: db_port }
 
   mypool:
-      type: OS::Neutron::Pool
-      #A completer
+    type: OS::Neutron::Pool
+    properties:
+      protocol: HTTP
+      monitors: [{get_resource: mymonitor}]
+      subnet_id: {get_param: subnet_id}
+      lb_method: ROUND_ROBIN
+      vip:
+        protocol_port: 80
 
   myloadbalancer:
-      type: OS::Neutron::LoadBalancer
-      #A completer
+    type: OS::Neutron::LoadBalancer
+    properties:
+      protocol_port: 80
+      pool_id: {get_resource: mypool}
+      members: [get_resource: server_nodes] # maybe not good
+  
+  lb_floating_ip:
+    type: OS::Neutron::FloatingIP
+    properties:
+      floating_network_id: {get_param: external_network_id}
+      port_id: {get_attr: [mypool, vip, port_id]}
 
   mymonitor:
-      type: OS::Neutron::HealthMonitor
-      properties:
-      #A completer
-
+    type: OS::Neutron::HealthMonitor
+    properties:
+      type: TCP
+      delay: 15
+      max_retries: 2
+      timeout: 5
 
 outputs:
   pool_ip_address:

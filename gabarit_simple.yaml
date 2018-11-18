@@ -5,24 +5,28 @@ description: >
   Gabarit HEAT permettant de deployer le serveur Web Python sur une seule machine virtuelle dans l'infonuage Openstack
 
 parameters:
+
   key_name:
     type: string
     description: Name of an existing key pair to use for the server
     default: tp3-cle
     constraints:
       - custom_constraint: nova.keypair
+
   flavor:
     type: string
     description: Flavor for the server to be created
     default: INF4410-mini
     constraints:
       - custom_constraint: nova.flavor
+
   image:
     type: string
     description: Image ID or image name to use for the server
     default: INF4410-Ubuntu-trusty-mini
     constraints:
       - custom_constraint: glance.image
+
   admin_pass:
     type: string
     description: Admin password
@@ -32,11 +36,12 @@ parameters:
         description: Password length must be between 6 and 9 characters
       - allowed_pattern: "[a-zA-Z0-9]+"
         description: Password must consist of characters and numbers only
+
   network:
     type: string
     description: Network 
     default: inf4410-net
-
+    
   db_port:
     type: number
     description: Database port number
