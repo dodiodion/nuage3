@@ -50,7 +50,7 @@ def doWork(results):
 
         requests.task_done()
 
-concurrent = 1
+concurrent = 30
 requests = Queue(concurrent)
 results = Queue(concurrent)
 
